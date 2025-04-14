@@ -58,9 +58,13 @@ def extract_titles(html_str):
         logging.error(f"Ошибка при извлечении title: {e}")
         return ""
 
-def save_csv(okpd_code, page, data):
+def save_csv(okpd_code, page, data, date_from, date_to):
+    """
+    Сохраняет данные в CSV, добавляя столбец с информацией о диапазоне выгрузки.
+    """
     os.makedirs(DATA_FOLDER, exist_ok=True)
     items = data.get("items", [])
+    date_range_str = f"{date_from} to {date_to}"
     # Если в элементе присутствует characteristicValues, извлекаем title для full и preview
     for item in items:
         if "characteristicValues" in item:
@@ -69,10 +73,12 @@ def save_csv(okpd_code, page, data):
                 item["characteristic_full_extracted"] = extract_titles(char_vals["full"])
             if "preview" in char_vals:
                 item["characteristic_preview_extracted"] = extract_titles(char_vals["preview"])
+        # Добавляем информацию о диапазоне выгрузки
+        item["date_range"] = date_range_str
     df = pd.DataFrame(items)
     file_name = os.path.join(DATA_FOLDER, f"{okpd_code}_{page}.csv")
     df.to_csv(file_name, index=False)
-    logging.info(f"Сохранён файл {file_name}")
+    logging.info(f"Сохранён файл {file_name} с диапазоном {date_range_str}")
 
 # --------------------- АСИНХРОННЫЕ функции для работы с API ---------------------
 
@@ -163,6 +169,7 @@ async def process_historical(code, session, state, jwt_token):
     state_info = state[code]
     current_state_date = datetime.strptime(state_info["time"], "%Y-%m-%d").date()
     date_from_dt = datetime.combine(current_state_date, datetime.min.time())
+    # Изменяем интервал с 1 до 7 дней
     date_to_dt = date_from_dt + timedelta(days=7)
     page = state_info["page"]
 
@@ -171,16 +178,17 @@ async def process_historical(code, session, state, jwt_token):
         date_to_iso   = date_to_dt.isoformat() + "Z"
         data = await get_purchases_with_retry(session, jwt_token, code, date_from_iso, date_to_iso, page)
         items = data.get("items", [])
-        logging.info(f"Исторически: ОКПД {code} за {state_info['time']} страница {page}: получено {len(items)} элементов")
+        logging.info(f"Исторически: ОКПД {code} за период {date_from_iso} - {date_to_iso}, страница {page}: получено {len(items)} элементов")
         # Задержка 5 секунд между запросами
         await asyncio.sleep(5)
         if not items:
-            new_date = current_state_date + timedelta(days=5)
+            # Обновляем состояние на следующий 7-дневный интервал
+            new_date = current_state_date + timedelta(days=7)
             state[code] = {"time": new_date.strftime("%Y-%m-%d"), "page": 1}
             save_state(state)
             break
         else:
-            save_csv(code, page, data)
+            save_csv(code, page, data, date_from_iso, date_to_iso)
             page += 1
             state[code]["page"] = page
             save_state(state)
@@ -189,7 +197,8 @@ async def process_historical(code, session, state, jwt_token):
 async def process_today(code, session, state, jwt_token):
     today = datetime.today().date()
     date_from_dt = datetime.combine(today, datetime.min.time())
-    date_to_dt = date_from_dt + timedelta(days=5)
+    # Изменяем интервал с 1 до 7 дней
+    date_to_dt = date_from_dt + timedelta(days=7)
     page = state[code]["page"]
 
     while True:
@@ -197,15 +206,16 @@ async def process_today(code, session, state, jwt_token):
         date_to_iso = date_to_dt.isoformat() + "Z"
         data = await get_purchases_with_retry(session, jwt_token, code, date_from_iso, date_to_iso, page)
         items = data.get("items", [])
-        logging.info(f"Сегодня: ОКПД {code} страница {page}: получено {len(items)} элементов")
+        logging.info(f"Сегодня: ОКПД {code} за период {date_from_iso} - {date_to_iso}, страница {page}: получено {len(items)} элементов")
         await asyncio.sleep(5)
         if not items:
-            new_date = today + timedelta(days=5)
+            # Обновляем состояние для сегодняшнего интервала: следующий интервал начинается через 7 дней
+            new_date = today + timedelta(days=7)
             state[code] = {"time": new_date.strftime("%Y-%m-%d"), "page": 1}
             save_state(state)
             break
         else:
-            save_csv(code, page, data)
+            save_csv(code, page, data, date_from_iso, date_to_iso)
             page += 1
             state[code]["page"] = page
             save_state(state)
@@ -245,7 +255,7 @@ async def scheduled_today_job(session, state):
             if tasks:
                 await asyncio.gather(*tasks)
             await asyncio.sleep(10)  # Небольшая задержка для завершения операций
-            next_target = datetime.combine(today + timedelta(days=5), dtime(18, 0))
+            next_target = datetime.combine(today + timedelta(days=1), dtime(18, 0))
             sleep_time = (next_target - datetime.now()).total_seconds()
             logging.info(f"Ожидание {sleep_time:.0f} секунд до следующего централизованного запуска.")
             await asyncio.sleep(sleep_time)
