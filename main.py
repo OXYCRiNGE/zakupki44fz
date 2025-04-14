@@ -163,7 +163,7 @@ async def process_historical(code, session, state, jwt_token):
     state_info = state[code]
     current_state_date = datetime.strptime(state_info["time"], "%Y-%m-%d").date()
     date_from_dt = datetime.combine(current_state_date, datetime.min.time())
-    date_to_dt = date_from_dt + timedelta(days=1)
+    date_to_dt = date_from_dt + timedelta(days=7)
     page = state_info["page"]
 
     while True:
@@ -175,7 +175,7 @@ async def process_historical(code, session, state, jwt_token):
         # Задержка 5 секунд между запросами
         await asyncio.sleep(5)
         if not items:
-            new_date = current_state_date + timedelta(days=1)
+            new_date = current_state_date + timedelta(days=5)
             state[code] = {"time": new_date.strftime("%Y-%m-%d"), "page": 1}
             save_state(state)
             break
@@ -189,7 +189,7 @@ async def process_historical(code, session, state, jwt_token):
 async def process_today(code, session, state, jwt_token):
     today = datetime.today().date()
     date_from_dt = datetime.combine(today, datetime.min.time())
-    date_to_dt = date_from_dt + timedelta(days=1)
+    date_to_dt = date_from_dt + timedelta(days=5)
     page = state[code]["page"]
 
     while True:
@@ -200,7 +200,7 @@ async def process_today(code, session, state, jwt_token):
         logging.info(f"Сегодня: ОКПД {code} страница {page}: получено {len(items)} элементов")
         await asyncio.sleep(5)
         if not items:
-            new_date = today + timedelta(days=1)
+            new_date = today + timedelta(days=5)
             state[code] = {"time": new_date.strftime("%Y-%m-%d"), "page": 1}
             save_state(state)
             break
@@ -245,7 +245,7 @@ async def scheduled_today_job(session, state):
             if tasks:
                 await asyncio.gather(*tasks)
             await asyncio.sleep(10)  # Небольшая задержка для завершения операций
-            next_target = datetime.combine(today + timedelta(days=1), dtime(18, 0))
+            next_target = datetime.combine(today + timedelta(days=5), dtime(18, 0))
             sleep_time = (next_target - datetime.now()).total_seconds()
             logging.info(f"Ожидание {sleep_time:.0f} секунд до следующего централизованного запуска.")
             await asyncio.sleep(sleep_time)
