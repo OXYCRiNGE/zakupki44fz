@@ -278,11 +278,11 @@ async def main():
                             logging.FileHandler(os.path.join(SETTINGS_FOLDER, "scraper.log"), encoding="utf-8"),
                             logging.StreamHandler()
                         ])
-
     try:
-        df = pd.read_excel("okpd2_code/okpd2.xlsx")
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        excel_path = os.path.join(base_dir, "okpd2_code", "okpd2.xlsx")
+        df = pd.read_excel(excel_path)
         okpd_codes = [format_code(x) for x in df['Код']]
-        # logging.info(f"Загружено {len(okpd_codes)} кодов ОКПД2: {okpd_codes}")
     except Exception as e:
         logging.error(f"Ошибка загрузки Excel: {str(e)}")
         return
