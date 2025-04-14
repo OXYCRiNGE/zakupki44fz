@@ -138,7 +138,7 @@ async def get_purchases_async(session: aiohttp.ClientSession, jwt_token, okpd2_c
         "dateFrom": date_from,
         "dateTo": date_to,
         "regionCodes": [],
-        "limit": 100,
+        "limit": 1000,
         "page": page,
         "customerRegNums": [],
         "customersExcluded": False,
