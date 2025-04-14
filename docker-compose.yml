@@ -1,5 +1,5 @@
 services:
-  zakupki-scraper:
+  zakupki44fz:
     build: .
     container_name: zakupki44fz
     restart: always
