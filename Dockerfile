@@ -22,6 +22,7 @@ RUN python3 -m pip install -r requirements.txt
 # Копируем весь исходный код в рабочую директорию
 FROM package
 COPY main.py .
+COPY okpd2_code .
 
 # Определяем команду запуска контейнера (замените "script.py" на имя вашего файла с основным кодом, если необходимо)
 ENTRYPOINT python -m main
