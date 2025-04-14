@@ -1,0 +1,9 @@
+services:
+  zakupki-scraper:
+    build: .
+    container_name: zakupki44fz
+    restart: always
+    volumes:
+      # Монтирование папок для сохранения данных и состояния, чтобы они сохранялись вне контейнера
+      - ./zakupki44fz_data:/app/zakupki44fz_data
+      - ./settings:/app/settings
