@@ -85,7 +85,7 @@ def save_csv(okpd_code, page, data, date_from, date_to):
 async def auth_async(session: aiohttp.ClientSession, retries=3):
     url = "https://auth.zakupki44fz.ru/api/v1/Login/LoginByEeoShortCode"
     params = {
-        "code": "27969f60750e4ab8b3315f352d3e801d",
+        "code": "CODE",
         "fingerprint": "notUsed",
         "audiences": [30, 1]
     }
